@@ -12,12 +12,12 @@ async def main():
     message = (
         f"📅 <b>{today}</b>\n\n"
         f"💵 <b>USD</b>\n"
-        f"  Купить: <code>{usd['buy']}</code> BYN\n"
-        f"  Продать: <code>{usd['sell']}</code> BYN\n\n"
+        f"  Сдать: <code>{usd['buy']}</code> BYN\n"
+        f"  Купить: <code>{usd['sell']}</code> BYN\n\n"
         f"💶 <b>EUR</b>\n"
-        f"  Купить: <code>{eur['buy']}</code> BYN\n"
-        f"  Продать: <code>{eur['sell']}</code> BYN\n\n"
-        f"<i>Лучшие курсы Гомеля по данным myfin.by</i>"
+        f"  Сдать: <code>{eur['buy']}</code> BYN\n"
+        f"  Купить: <code>{eur['sell']}</code> BYN\n\n"
+    
     )
     bot = Bot(token=os.environ["BOT_TOKEN"])
     await bot.send_message(chat_id=os.environ["CHANNEL_ID"], text=message, parse_mode=ParseMode.HTML)
