@@ -1,0 +1,15 @@
+[Unit]
+Description=Gomel Currency Rate Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_LINUX_USERNAME
+WorkingDirectory=/home/YOUR_LINUX_USERNAME/currency_bot
+EnvironmentFile=/home/YOUR_LINUX_USERNAME/currency_bot/.env
+ExecStart=/home/YOUR_LINUX_USERNAME/currency_bot/venv/bin/python bot.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
