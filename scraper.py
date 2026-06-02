@@ -20,16 +20,6 @@ TABLE_ROW_SELECTOR = "table tbody tr"
 
 
 async def get_best_rates() -> dict:
-    """
-    Scrapes myfin.by/currency/gomel and returns:
-    {
-        "USD": {"buy": float, "sell": float},
-        "EUR": {"buy": float, "sell": float},
-    }
-    where:
-      buy  = best rate you can sell currency TO the bank (highest value)
-      sell = best rate you can buy currency FROM the bank (lowest value)
-    """
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -39,38 +29,41 @@ async def get_best_rates() -> dict:
                 "Chrome/124.0.0.0 Safari/537.36"
             )
         )
-        page = await context.new_page()
 
-        # Intercept the XHR that delivers rates JSON (faster than DOM scraping)
-        rates_data = {}
+        usd = await _scrape_currency_page(context, "https://myfin.by/currency/usd/gomel")
+        eur = await _scrape_currency_page(context, "https://myfin.by/currency/eur/gomel")
 
-        async def handle_response(response):
-            url = response.url
-            # myfin.by loads rates via an API call — capture it
-            if "currency" in url and response.status == 200:
-                content_type = response.headers.get("content-type", "")
-                if "json" in content_type:
-                    try:
-                        json_body = await response.json()
-                        # Store all JSON responses; we'll pick the right one
-                        rates_data[url] = json_body
-                    except Exception:
-                        pass
-
-        page.on("response", handle_response)
-
-        await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
-
-        # Try to extract from intercepted JSON first
-        result = _parse_from_json(rates_data)
-        if result:
-            await browser.close()
-            return result
-
-        # Fallback: parse the rendered HTML table
-        result = await _parse_from_dom(page)
         await browser.close()
+        return {"USD": usd, "EUR": eur}
+
+
+async def _scrape_currency_page(context, url: str) -> dict:
+    """Scrape a single currency page and return best buy/sell rates."""
+    page = await context.new_page()
+
+    json_rows = []
+
+    async def handle_response(response):
+        if response.status == 200 and "json" in response.headers.get("content-type", ""):
+            try:
+                body = await response.json()
+                json_rows.append(body)
+            except Exception:
+                pass
+
+    page.on("response", handle_response)
+    await page.goto(url, wait_until="networkidle", timeout=60_000)
+
+    # Try JSON intercept first
+    result = _extract_rates_from_json(json_rows)
+    if result:
+        await page.close()
         return result
+
+    # Fallback: DOM
+    result = await _extract_rates_from_dom(page)
+    await page.close()
+    return result
 
 
 def _parse_from_json(rates_data: dict) -> dict | None:
