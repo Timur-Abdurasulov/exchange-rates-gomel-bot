@@ -214,6 +214,61 @@ def _to_float(value) -> float | None:
         return None
 
 
+def _extract_rates_from_json(json_list: list) -> dict | None:
+    best_buy = 0.0
+    best_sell = float("inf")
+
+    for data in json_list:
+        items = []
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict):
+            for key in ("data", "rates", "result", "items", "currencies"):
+                if isinstance(data.get(key), list):
+                    items = data[key]
+                    break
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            buy = _to_float(item.get("buy", item.get("buyRate", item.get("rateBuy"))))
+            sell = _to_float(item.get("sell", item.get("sellRate", item.get("rateSell"))))
+            if buy and sell and buy > 0 and sell > 0:
+                if buy > best_buy:
+                    best_buy = buy
+                if sell < best_sell:
+                    best_sell = sell
+
+    if best_buy > 0 and best_sell < float("inf"):
+        return {"buy": round(best_buy, 4), "sell": round(best_sell, 4)}
+    return None
+
+
+async def _extract_rates_from_dom(page) -> dict:
+    """Parse the rendered table on a single-currency page."""
+    best_buy = 0.0
+    best_sell = float("inf")
+
+    rows = await page.query_selector_all("table tbody tr")
+    for row in rows:
+        cells = await row.query_selector_all("td")
+        texts = [await c.inner_text() for c in cells]
+        numbers = []
+        for t in texts:
+            n = _to_float(t.strip())
+            if n and 0.5 < n < 500:
+                numbers.append(n)
+        if len(numbers) >= 2:
+            if numbers[0] > best_buy:
+                best_buy = numbers[0]
+            if numbers[1] < best_sell:
+                best_sell = numbers[1]
+
+    return {
+        "buy": round(best_buy, 4),
+        "sell": round(best_sell, 4),
+    }
+
 # Quick test
 if __name__ == "__main__":
     async def test():
