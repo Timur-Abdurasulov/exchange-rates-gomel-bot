@@ -2,7 +2,7 @@ name: Send Daily Rates
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 06:00 UTC every day
+    - cron: '15 8 * * *'   # 06:00 UTC every day
   workflow_dispatch:        # lets you trigger it manually too
 
 jobs:
