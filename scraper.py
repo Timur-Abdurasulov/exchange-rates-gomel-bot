@@ -33,8 +33,8 @@ async def get_best_rates() -> dict:
         await browser.close()
 
         return {
-            "USD": {"sell": numbers[0], "buy": numbers[1]},
-            "EUR": {"sell": numbers[2], "buy": numbers[3]},
+            "USD": {"sell": numbers[1], "buy": numbers[0]},
+            "EUR": {"sell": numbers[3], "buy": numbers[2]},
         }
 
 if __name__ == "__main__":
