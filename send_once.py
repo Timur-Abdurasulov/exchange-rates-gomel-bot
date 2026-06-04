@@ -19,6 +19,9 @@ async def main():
         f"  Купить: <code>{eur['sell']}</code> BYN\n\n"
     
     )
+    rates = await get_best_rates()
+    print(f"Raw rates: {rates}")
+    
     bot = Bot(token=os.environ["BOT_TOKEN"])
     await bot.send_message(chat_id=os.environ["CHANNEL_ID"], text=message, parse_mode=ParseMode.HTML)
     print("Sent successfully!")
