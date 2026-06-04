@@ -30,9 +30,11 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: python send_once.py
 
-      - name: Upload screenshot
+      - name: Upload debug files
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: page-screenshot
-          path: screenshot.png
+          name: debug-files
+          path: |
+            screenshot.png
+            page.html
