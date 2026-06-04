@@ -29,20 +29,16 @@ async def get_best_rates() -> dict:
                 "Chrome/124.0.0.0 Safari/537.36"
             )
         )
-
-        usd = await _scrape_currency_page(context, "https://myfin.by/currency/usd/gomel")
-        eur = await _scrape_currency_page(context, "https://myfin.by/currency/eur/gomel")
-
+        usd = await _scrape_currency_page(context, "https://myfin.by/currency/usd/gomel", min_rate=2.5, max_rate=4.0)
+        eur = await _scrape_currency_page(context, "https://myfin.by/currency/eur/gomel", min_rate=3.0, max_rate=5.0)
         await browser.close()
         return {"USD": usd, "EUR": eur}
 
 
-async def _scrape_currency_page(context, url: str) -> dict:
-    """Scrape a single currency page using DOM only."""
+async def _scrape_currency_page(context, url: str, min_rate: float, max_rate: float) -> dict:
     page = await context.new_page()
     await page.goto(url, wait_until="networkidle", timeout=60_000)
-    result = await _extract_rates_from_dom(page)
-    print(f"DOM result for {url}: {result}")
+    result = await _extract_rates_from_dom(page, min_rate, max_rate)
     await page.close()
     return result
 
@@ -248,25 +244,26 @@ def _extract_rates_from_json(json_list: list) -> dict | None:
     return None
 
 
-async def _extract_rates_from_dom(page) -> dict:
-    best_buy = float("inf")   # want lowest
-    best_sell = 0.0           # want highest
+async def _extract_rates_from_dom(page, min_rate: float, max_rate: float) -> dict:
+    best_buy = float("inf")   # lowest bank sell price = cheapest for you to buy
+    best_sell = 0.0           # highest bank buy price = most you get when selling
 
     rows = await page.query_selector_all("table tbody tr")
     for row in rows:
         cells = await row.query_selector_all("td")
-        texts = [await c.inner_text() for c in cells]
-        numbers = []
-        for t in texts:
-            n = _to_float(t.strip())
-            if n and 0.5 < n < 500:
-                numbers.append(n)
-        if len(numbers) >= 2:
-            sell_val = numbers[0]  # bank buys = you sell = want highest
-            buy_val = numbers[1]   # bank sells = you buy = want lowest
+        if len(cells) < 3:
+            continue
+        # Only look at cells 1 and 2 (sell and buy columns), skip cell 0 (bank name)
+        try:
+            sell_val = _to_float((await cells[1].inner_text()).strip())
+            buy_val = _to_float((await cells[2].inner_text()).strip())
+        except IndexError:
+            continue
 
-        # Only use rows where values are in a realistic range for this currency
-        if not (1.5 < sell_val < 10 and 1.5 < buy_val < 10):
+        if not sell_val or not buy_val:
+            continue
+        # Strict range filter — only accept values in the expected rate range
+        if not (min_rate < sell_val < max_rate and min_rate < buy_val < max_rate):
             continue
 
         if sell_val > best_sell:
@@ -278,6 +275,7 @@ async def _extract_rates_from_dom(page) -> dict:
         "sell": round(best_sell, 4),
         "buy": round(best_buy, 4),
     }
+
 
 # Quick test
 if __name__ == "__main__":
