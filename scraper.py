@@ -249,8 +249,8 @@ def _extract_rates_from_json(json_list: list) -> dict | None:
 
 
 async def _extract_rates_from_dom(page) -> dict:
-    best_buy = 0.0
-    best_sell = float("inf")
+    best_buy = float("inf")   # want lowest
+    best_sell = 0.0           # want highest
 
     rows = await page.query_selector_all("table tbody tr")
     for row in rows:
@@ -262,19 +262,21 @@ async def _extract_rates_from_dom(page) -> dict:
             if n and 0.5 < n < 500:
                 numbers.append(n)
         if len(numbers) >= 2:
-            sell_val = numbers[0]
-            buy_val = numbers[1]
-        # Skip rows where data looks inverted or invalid
-        if buy_val <= sell_val:
+            sell_val = numbers[0]  # bank buys = you sell = want highest
+            buy_val = numbers[1]   # bank sells = you buy = want lowest
+
+        # Only use rows where values are in a realistic range for this currency
+        if not (1.5 < sell_val < 10 and 1.5 < buy_val < 10):
             continue
-        if buy_val > best_buy:
-            best_buy = buy_val
-        if sell_val < best_sell:
+
+        if sell_val > best_sell:
             best_sell = sell_val
+        if buy_val < best_buy:
+            best_buy = buy_val
 
     return {
-        "buy": round(best_buy, 4),
         "sell": round(best_sell, 4),
+        "buy": round(best_buy, 4),
     }
 
 # Quick test
