@@ -17,7 +17,8 @@ async def get_best_rates() -> dict:
         await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
 
         # Extract all accent values — order is: USD sell, USD buy, EUR sell, EUR buy, RUB sell, RUB buy
-        values = await page.query_selector_all("span.accent")
+        summary = await page.query_selector("div.course-brief-info--best-courses")
+        values = await summary.query_selector_all("span.accent")
         numbers = []
         for v in values:
             text = await v.inner_text()
