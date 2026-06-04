@@ -1,4 +1,5 @@
 import asyncio
+import re
 from playwright.async_api import async_playwright
 
 TARGET_URL = "https://myfin.by/currency/gomel"
@@ -15,16 +16,26 @@ async def get_best_rates() -> dict:
         )
         page = await context.new_page()
         await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
-        await page.screenshot(path="screenshot.png", full_page=True)
 
-        # Save HTML for debugging
-        html = await page.content()
-        with open("page.html", "w", encoding="utf-8") as f:
-            f.write(html)
-        print("HTML saved, length:", len(html))
+        elements = await page.query_selector_all("span.accent")
+        numbers = []
+        for el in elements:
+            text = await el.inner_text()
+            cleaned = re.sub(r'[^\d.,]', '', text.strip())
+            try:
+                n = float(cleaned.replace(",", "."))
+                if 2.0 < n < 5.0:
+                    numbers.append(n)
+            except ValueError:
+                continue
 
+        print(f"Extracted values: {numbers}")
         await browser.close()
-        return {"USD": {"sell": 0, "buy": 0}, "EUR": {"sell": 0, "buy": 0}}
+
+        return {
+            "USD": {"sell": numbers[0], "buy": numbers[1]},
+            "EUR": {"sell": numbers[2], "buy": numbers[3]},
+        }
 
 if __name__ == "__main__":
     async def test():
