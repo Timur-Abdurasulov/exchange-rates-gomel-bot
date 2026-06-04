@@ -231,13 +231,14 @@ def _extract_rates_from_json(json_list: list) -> dict | None:
         for item in items:
             if not isinstance(item, dict):
                 continue
+            print(f"JSON item keys: {list(item.keys())}, values: {item}")
             buy = _to_float(item.get("buy", item.get("buyRate", item.get("rateBuy"))))
             sell = _to_float(item.get("sell", item.get("sellRate", item.get("rateSell"))))
             if buy and sell and buy > 0 and sell > 0:
-                if buy > best_buy:
-                    best_buy = buy
-                if sell < best_sell:
-                    best_sell = sell
+              if buy > best_buy:   # highest buy rate
+                best_buy = buy
+              if sell < best_sell: # lowest sell rate
+                best_sell = sell
 
     if best_buy > 0 and best_sell < float("inf"):
         return {"buy": round(best_buy, 4), "sell": round(best_sell, 4)}
@@ -245,7 +246,6 @@ def _extract_rates_from_json(json_list: list) -> dict | None:
 
 
 async def _extract_rates_from_dom(page) -> dict:
-    """Parse the rendered table on a single-currency page."""
     best_buy = 0.0
     best_sell = float("inf")
 
@@ -259,10 +259,12 @@ async def _extract_rates_from_dom(page) -> dict:
             if n and 0.5 < n < 500:
                 numbers.append(n)
         if len(numbers) >= 2:
-            if numbers[0] > best_buy:
-                best_buy = numbers[0]
-            if numbers[1] < best_sell:
-                best_sell = numbers[1]
+            sell_val = numbers[0]  # Сдать — you sell to bank, want lowest
+            buy_val = numbers[1]   # Купить — you buy from bank, want highest
+            if buy_val > best_buy:
+                best_buy = buy_val
+            if sell_val < best_sell:
+                best_sell = sell_val
 
     return {
         "buy": round(best_buy, 4),
