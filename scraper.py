@@ -262,13 +262,15 @@ async def _extract_rates_from_dom(page) -> dict:
             if n and 0.5 < n < 500:
                 numbers.append(n)
         if len(numbers) >= 2:
-            print(f"Row texts: {texts} -> numbers: {numbers}")
             sell_val = numbers[0]
             buy_val = numbers[1]
-            if buy_val > best_buy:
-                best_buy = buy_val
-            if sell_val < best_sell:
-                best_sell = sell_val
+        # Skip rows where data looks inverted or invalid
+        if buy_val <= sell_val:
+            continue
+        if buy_val > best_buy:
+            best_buy = buy_val
+        if sell_val < best_sell:
+            best_sell = sell_val
 
     return {
         "buy": round(best_buy, 4),
