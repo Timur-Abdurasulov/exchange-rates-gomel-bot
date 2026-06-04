@@ -15,6 +15,7 @@ async def get_best_rates() -> dict:
         )
         page = await context.new_page()
         await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
+        await page.screenshot(path="screenshot.png", full_page=True)
 
         # Save HTML for debugging
         html = await page.content()
