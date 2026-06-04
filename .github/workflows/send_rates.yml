@@ -27,4 +27,5 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          PYTHONUNBUFFERED: "1"
         run: python send_once.py
