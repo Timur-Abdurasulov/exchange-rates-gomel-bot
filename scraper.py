@@ -15,11 +15,27 @@ async def get_best_rates() -> dict:
         )
         page = await context.new_page()
         await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
-        await page.screenshot(path="screenshot.png", full_page=True)
 
-        # Extract all accent values — order is: USD sell, USD buy, EUR sell, EUR buy, RUB sell, RUB buy
+        # Dismiss cookie popup if present
+        try:
+            accept_btn = await page.wait_for_selector("button.btn-cookie-accept, button.js-cookie-accept, a.btn--green", timeout=5000)
+            if accept_btn:
+                await accept_btn.click()
+                await page.wait_for_timeout(1000)
+        except Exception:
+            pass  # No popup, continue
+
+        # Wait for the summary rates to appear
+        await page.wait_for_selector("span.accent", timeout=10000)
+
+        # Scope to the best rates summary block
         summary = await page.query_selector("div.course-brief-info--best-courses")
-        values = await summary.query_selector_all("span.accent")
+        if summary:
+            values = await summary.query_selector_all("span.accent")
+        else:
+            # Fallback to all accent spans
+            values = await page.query_selector_all("span.accent")
+
         numbers = []
         for v in values:
             text = await v.inner_text()
@@ -29,7 +45,6 @@ async def get_best_rates() -> dict:
                 continue
 
         print(f"Extracted accent values: {numbers}")
-
         await browser.close()
 
         return {
