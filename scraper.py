@@ -16,41 +16,14 @@ async def get_best_rates() -> dict:
         page = await context.new_page()
         await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
 
-        # Dismiss cookie popup if present
-        try:
-            accept_btn = await page.wait_for_selector("button.btn-cookie-accept, button.js-cookie-accept, a.btn--green", timeout=5000)
-            if accept_btn:
-                await accept_btn.click()
-                await page.wait_for_timeout(1000)
-        except Exception:
-            pass  # No popup, continue
+        # Save HTML for debugging
+        html = await page.content()
+        with open("page.html", "w", encoding="utf-8") as f:
+            f.write(html)
+        print("HTML saved, length:", len(html))
 
-        # Wait for the summary rates to appear
-        await page.wait_for_selector("span.accent", timeout=10000)
-
-        # Scope to the best rates summary block
-        summary = await page.query_selector("div.course-brief-info--best-courses")
-        if summary:
-            values = await summary.query_selector_all("span.accent")
-        else:
-            # Fallback to all accent spans
-            values = await page.query_selector_all("span.accent")
-
-        numbers = []
-        for v in values:
-            text = await v.inner_text()
-            try:
-                numbers.append(float(text.strip().replace(",", ".")))
-            except ValueError:
-                continue
-
-        print(f"Extracted accent values: {numbers}")
         await browser.close()
-
-        return {
-            "USD": {"sell": numbers[0], "buy": numbers[1]},
-            "EUR": {"sell": numbers[2], "buy": numbers[3]},
-        }
+        return {"USD": {"sell": 0, "buy": 0}, "EUR": {"sell": 0, "buy": 0}}
 
 if __name__ == "__main__":
     async def test():
