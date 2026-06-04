@@ -38,10 +38,13 @@ async def get_best_rates() -> dict:
 
 
 async def _scrape_currency_page(context, url: str) -> dict:
-    """Scrape a single currency page and return best buy/sell rates."""
+    """Scrape a single currency page using DOM only."""
     page = await context.new_page()
-
-    json_rows = []
+    await page.goto(url, wait_until="networkidle", timeout=60_000)
+    result = await _extract_rates_from_dom(page)
+    print(f"DOM result for {url}: {result}")
+    await page.close()
+    return result
 
     async def handle_response(response):
         if response.status == 200 and "json" in response.headers.get("content-type", ""):
@@ -259,8 +262,9 @@ async def _extract_rates_from_dom(page) -> dict:
             if n and 0.5 < n < 500:
                 numbers.append(n)
         if len(numbers) >= 2:
-            sell_val = numbers[0]  # Сдать — you sell to bank, want lowest
-            buy_val = numbers[1]   # Купить — you buy from bank, want highest
+            print(f"Row texts: {texts} -> numbers: {numbers}")
+            sell_val = numbers[0]
+            buy_val = numbers[1]
             if buy_val > best_buy:
                 best_buy = buy_val
             if sell_val < best_sell:
