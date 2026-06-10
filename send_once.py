@@ -7,7 +7,7 @@ import os
 
 async def main():
     rates = await get_best_rates()
-    today = datetime.now().strftime("%d.%m.%Y")
+    today = datetime.now().strftime("%d.%m.%Y %H:%M"")
     usd, eur = rates["USD"], rates["EUR"]
     message = (
         f"📅 <b>{today}</b>\n\n"
