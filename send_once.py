@@ -2,12 +2,13 @@ import asyncio
 from telegram import Bot
 from telegram.constants import ParseMode
 from scraper import get_best_rates
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import os
 
 async def main():
     rates = await get_best_rates()
-    today = datetime.now().strftime("%d.%m.%Y %H:%M")
+    utc_plus_3 = timezone(timedelta(hours=3))
+    today = datetime.now(utc_plus_3).strftime("%d.%m.%Y %H:%M")
     usd, eur = rates["USD"], rates["EUR"]
     message = (
         f"📅 <b>{today}</b>\n\n"
