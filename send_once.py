@@ -18,6 +18,7 @@ async def main():
         f"💶 <b>EUR</b>\n"
         f"  Сдать: <code>{eur['buy']}</code> BYN\n"
         f"  Купить: <code>{eur['sell']}</code> BYN\n\n"
+        f"https://myfin.by/currency/gomel"
     
     )
     rates = await get_best_rates()
