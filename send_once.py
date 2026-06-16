@@ -1,5 +1,5 @@
 import asyncio
-from telegram import Bot
+from telegram import Bot, LinkPreviewOptions
 from telegram.constants import ParseMode
 from scraper import get_best_rates
 from datetime import datetime, timezone, timedelta
@@ -25,7 +25,7 @@ async def main():
     print(f"Raw rates: {rates}")
     
     bot = Bot(token=os.environ["BOT_TOKEN"])
-    await bot.send_message(chat_id=os.environ["CHANNEL_ID"], text=message, parse_mode=ParseMode.HTML)
+    await bot.send_message(chat_id=os.environ["CHANNEL_ID"], text=message, parse_mode=ParseMode.HTML, link_preview_options=LinkPreviewOptions(is_disabled=True))
     print("Sent successfully!")
 
 asyncio.run(main())
