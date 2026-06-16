@@ -33,8 +33,13 @@ def commit_rates():
     subprocess.run(["git", "config", "user.email", "bot@github.com"], check=True)
     subprocess.run(["git", "config", "user.name", "GitHub Actions Bot"], check=True)
     subprocess.run(["git", "add", RATES_FILE], check=True)
-    subprocess.run(["git", "commit", "-m", "Update last rates"], check=True)
-    subprocess.run(["git", "push"], check=True)
+    # Only commit if there are actual changes
+    result = subprocess.run(["git", "diff", "--cached", "--quiet"])
+    if result.returncode != 0:
+        subprocess.run(["git", "commit", "-m", "Update last rates"], check=True)
+        subprocess.run(["git", "push"], check=True)
+    else:
+        print("No changes to commit")
 
 async def main():
     rates = await get_best_rates()
