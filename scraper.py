@@ -7,7 +7,6 @@ TARGET_URL = "https://myfin.by/currency/gomel"
 # Add the exact bank names you want to track here (must match the table's first column)
 FAVORITE_BANKS = [
     "Приложение BNB-Bank",
-    "Приорбанк",
 ]
 
 
@@ -24,7 +23,7 @@ async def get_best_rates() -> dict:
         page = await context.new_page()
         await page.goto(TARGET_URL, wait_until="networkidle", timeout=60_000)
 
-        # ---- Best rates from summary box ----
+        # ---- Best rates from summary box (numbers only) ----
         elements = await page.query_selector_all("span.accent")
         numbers = []
         for el in elements:
@@ -44,20 +43,27 @@ async def get_best_rates() -> dict:
             "EUR": {"sell": numbers[3], "buy": numbers[2]},
         }
 
+        # ---- Scan the full table to find which bank(s) match each best rate ----
+        table_rows = await _scan_table(page)
+        best_banks = _find_best_rate_banks(best, table_rows)
+        best["USD"]["sell_banks"] = best_banks["USD"]["sell"]
+        best["USD"]["buy_banks"] = best_banks["USD"]["buy"]
+        best["EUR"]["sell_banks"] = best_banks["EUR"]["sell"]
+        best["EUR"]["buy_banks"] = best_banks["EUR"]["buy"]
+
         # ---- Favorite bank rates from the full table ----
-        favorites = await _extract_favorite_banks(page, FAVORITE_BANKS)
+        favorites = _extract_favorite_banks(table_rows, FAVORITE_BANKS)
 
         await browser.close()
         return {"best": best, "favorites": favorites}
 
 
-async def _extract_favorite_banks(page, bank_names: list) -> dict:
+async def _scan_table(page) -> list:
     """
-    Scan the table rows and extract USD/EUR sell+buy rates
-    for each bank name in bank_names.
-    Table columns per row: Bank | USD_sell | USD_buy | EUR_sell | EUR_buy | RUB_sell | RUB_buy | branches
+    Reads the full rate table once and returns a list of dicts:
+    [{"bank": str, "usd_sell": float, "usd_buy": float, "eur_sell": float, "eur_buy": float}, ...]
     """
-    results = {}
+    rows_data = []
     rows = await page.query_selector_all("table tbody tr")
 
     for row in rows:
@@ -66,23 +72,79 @@ async def _extract_favorite_banks(page, bank_names: list) -> dict:
             continue
 
         bank_text = (await cells[0].inner_text()).strip()
+        # Skip rows that look like branch/address sub-rows (they start with city names, not bank names)
+        if not bank_text or bank_text.startswith(("г.", " г.", "Гомель,")):
+            continue
 
+        try:
+            usd_sell = _to_float((await cells[1].inner_text()).strip())
+            usd_buy = _to_float((await cells[2].inner_text()).strip())
+            eur_sell = _to_float((await cells[3].inner_text()).strip())
+            eur_buy = _to_float((await cells[4].inner_text()).strip())
+        except IndexError:
+            continue
+
+        if usd_sell and usd_buy and eur_sell and eur_buy:
+            rows_data.append({
+                "bank": bank_text,
+                "usd_sell": usd_sell,
+                "usd_buy": usd_buy,
+                "eur_sell": eur_sell,
+                "eur_buy": eur_buy,
+            })
+
+    return rows_data
+
+
+def _find_best_rate_banks(best: dict, table_rows: list) -> dict:
+    """
+    For each of the 4 best values, find which bank(s) in the table match it exactly.
+    Returns lists of bank names (could be more than one bank tied for best).
+    """
+    result = {
+        "USD": {"sell": [], "buy": []},
+        "EUR": {"sell": [], "buy": []},
+    }
+
+    targets = {
+        ("USD", "sell"): best["USD"]["sell"],
+        ("USD", "buy"): best["USD"]["buy"],
+        ("EUR", "sell"): best["EUR"]["sell"],
+        ("EUR", "buy"): best["EUR"]["buy"],
+    }
+
+    field_map = {
+        ("USD", "sell"): "usd_sell",
+        ("USD", "buy"): "usd_buy",
+        ("EUR", "sell"): "eur_sell",
+        ("EUR", "buy"): "eur_buy",
+    }
+
+    for key, target_value in targets.items():
+        field = field_map[key]
+        matches = [
+            row["bank"] for row in table_rows
+            if abs(row[field] - target_value) < 0.0001
+        ]
+        currency, side = key
+        result[currency][side] = matches
+        print(f"Best {currency} {side} ({target_value}) found at: {matches}")
+
+    return result
+
+
+def _extract_favorite_banks(table_rows: list, bank_names: list) -> dict:
+    """Find rates for specific favorite banks from the already-scanned table."""
+    results = {}
+
+    for row in table_rows:
         for target_name in bank_names:
-            if target_name in bank_text and target_name not in results:
-                try:
-                    usd_sell = _to_float((await cells[1].inner_text()).strip())
-                    usd_buy = _to_float((await cells[2].inner_text()).strip())
-                    eur_sell = _to_float((await cells[3].inner_text()).strip())
-                    eur_buy = _to_float((await cells[4].inner_text()).strip())
-                except IndexError:
-                    continue
-
-                if usd_sell and usd_buy and eur_sell and eur_buy:
-                    results[target_name] = {
-                        "USD": {"sell": usd_sell, "buy": usd_buy},
-                        "EUR": {"sell": eur_sell, "buy": eur_buy},
-                    }
-                    print(f"Found favorite bank '{target_name}': {results[target_name]}")
+            if target_name in row["bank"] and target_name not in results:
+                results[target_name] = {
+                    "USD": {"sell": row["usd_sell"], "buy": row["usd_buy"]},
+                    "EUR": {"sell": row["eur_sell"], "buy": row["eur_buy"]},
+                }
+                print(f"Found favorite bank '{target_name}': {results[target_name]}")
 
     for name in bank_names:
         if name not in results:
