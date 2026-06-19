@@ -38,18 +38,9 @@ async def get_best_rates() -> dict:
 
         print(f"Extracted values: {numbers}")
 
-        best = {
-            "USD": {"sell": numbers[1], "buy": numbers[0]},
-            "EUR": {"sell": numbers[3], "buy": numbers[2]},
-        }
-
-        # ---- Scan the full table to find which bank(s) match each best rate ----
+        # ---- Scan the full table once; derive best rates directly from it ----
         table_rows = await _scan_table(page)
-        best_banks = _find_best_rate_banks(best, table_rows)
-        best["USD"]["sell_banks"] = best_banks["USD"]["sell"]
-        best["USD"]["buy_banks"] = best_banks["USD"]["buy"]
-        best["EUR"]["sell_banks"] = best_banks["EUR"]["sell"]
-        best["EUR"]["buy_banks"] = best_banks["EUR"]["buy"]
+        best = _compute_best_from_table(table_rows)
 
         # ---- Favorite bank rates from the full table ----
         favorites = _extract_favorite_banks(table_rows, FAVORITE_BANKS)
@@ -96,41 +87,47 @@ async def _scan_table(page) -> list:
     return rows_data
 
 
-def _find_best_rate_banks(best: dict, table_rows: list) -> dict:
+def _compute_best_from_table(table_rows: list) -> dict:
     """
-    For each of the 4 best values, find which bank(s) in the table match it exactly.
-    Returns lists of bank names (could be more than one bank tied for best).
+    Derive best USD/EUR sell+buy rates directly from the table scan,
+    and record which bank(s) hold each best value.
+    'Сдать' (sell, you sell to bank) -> highest value is best for you.
+    'Купить' (buy, you buy from bank) -> lowest value is best for you.
     """
-    result = {
-        "USD": {"sell": [], "buy": []},
-        "EUR": {"sell": [], "buy": []},
+    best = {
+        "USD": {"sell": 0.0, "buy": float("inf"), "sell_banks": [], "buy_banks": []},
+        "EUR": {"sell": 0.0, "buy": float("inf"), "sell_banks": [], "buy_banks": []},
     }
 
-    targets = {
-        ("USD", "sell"): best["USD"]["sell"],
-        ("USD", "buy"): best["USD"]["buy"],
-        ("EUR", "sell"): best["EUR"]["sell"],
-        ("EUR", "buy"): best["EUR"]["buy"],
-    }
+    for row in table_rows:
+        for currency, sell_key, buy_key in (("USD", "usd_sell", "usd_buy"), ("EUR", "eur_sell", "eur_buy")):
+            sell_val = row[sell_key]
+            buy_val = row[buy_key]
 
-    field_map = {
-        ("USD", "sell"): "usd_sell",
-        ("USD", "buy"): "usd_buy",
-        ("EUR", "sell"): "eur_sell",
-        ("EUR", "buy"): "eur_buy",
-    }
+            if sell_val > best[currency]["sell"]:
+                best[currency]["sell"] = sell_val
+                best[currency]["sell_banks"] = [row["bank"]]
+            elif abs(sell_val - best[currency]["sell"]) < 0.0001:
+                if row["bank"] not in best[currency]["sell_banks"]:
+                    best[currency]["sell_banks"].append(row["bank"])
 
-    for key, target_value in targets.items():
-        field = field_map[key]
-        matches = [
-            row["bank"] for row in table_rows
-            if abs(row[field] - target_value) < 0.0001
-        ]
-        currency, side = key
-        result[currency][side] = matches
-        print(f"Best {currency} {side} ({target_value}) found at: {matches}")
+            if buy_val < best[currency]["buy"]:
+                best[currency]["buy"] = buy_val
+                best[currency]["buy_banks"] = [row["bank"]]
+            elif abs(buy_val - best[currency]["buy"]) < 0.0001:
+                if row["bank"] not in best[currency]["buy_banks"]:
+                    best[currency]["buy_banks"].append(row["bank"])
 
-    return result
+    for currency in ("USD", "EUR"):
+        best[currency]["sell"] = round(best[currency]["sell"], 4)
+        best[currency]["buy"] = round(best[currency]["buy"], 4)
+        print(f"Best {currency} sell: {best[currency]['sell']} at {best[currency]['sell_banks']}")
+        print(f"Best {currency} buy: {best[currency]['buy']} at {best[currency]['buy_banks']}")
+
+    return best
+
+
+
 
 
 def _extract_favorite_banks(table_rows: list, bank_names: list) -> dict:
