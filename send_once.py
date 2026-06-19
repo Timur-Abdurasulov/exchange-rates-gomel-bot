@@ -33,7 +33,6 @@ def commit_rates():
     subprocess.run(["git", "config", "user.email", "bot@github.com"], check=True)
     subprocess.run(["git", "config", "user.name", "GitHub Actions Bot"], check=True)
     subprocess.run(["git", "add", RATES_FILE], check=True)
-    # Only commit if there are actual changes
     result = subprocess.run(["git", "diff", "--cached", "--quiet"])
     if result.returncode != 0:
         subprocess.run(["git", "commit", "-m", "Update last rates"], check=True)
@@ -44,10 +43,16 @@ def commit_rates():
 def format_currency_block(label, rates, last_rates):
     last_sell = last_rates["sell"] if last_rates else None
     last_buy = last_rates["buy"] if last_rates else None
+
+    sell_banks = rates.get("sell_banks", [])
+    buy_banks = rates.get("buy_banks", [])
+    sell_banks_str = f" — {', '.join(sell_banks)}" if sell_banks else ""
+    buy_banks_str = f" — {', '.join(buy_banks)}" if buy_banks else ""
+
     return (
         f"{label}\n"
-        f"  Сдать: <code>{rates['sell']}</code> BYN{format_delta(last_sell, rates['sell'])}\n"
-        f"  Купить: <code>{rates['buy']}</code> BYN{format_delta(last_buy, rates['buy'])}\n"
+        f"  Сдать: <code>{rates['sell']}</code> BYN{format_delta(last_sell, rates['sell'])}{sell_banks_str}\n"
+        f"  Купить: <code>{rates['buy']}</code> BYN{format_delta(last_buy, rates['buy'])}{buy_banks_str}\n"
     )
 
 async def main():
