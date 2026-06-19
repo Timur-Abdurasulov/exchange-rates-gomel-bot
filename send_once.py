@@ -15,9 +15,9 @@ def load_last_rates():
             return json.load(f)
     return None
 
-def save_rates(rates):
+def save_rates(data):
     with open(RATES_FILE, "w") as f:
-        json.dump(rates, f)
+        json.dump(data, f)
 
 def format_delta(old, new):
     if old is None:
@@ -42,33 +42,45 @@ def commit_rates():
         print("No changes to commit")
 
 async def main():
-    rates = await get_best_rates()
-    last = load_last_rates()
-    
+    data = await get_best_rates()
+    best = data["best"]
+    favorites = data["favorites"]
+
+    last_data = load_last_rates()
+    last_best = last_data["best"] if last_data else None
+
     utc_plus_3 = timezone(timedelta(hours=3))
     today = datetime.now(utc_plus_3).strftime("%d.%m.%Y %H:%M")
-    
-    usd, eur = rates["USD"], rates["EUR"]
-    last_usd = last["USD"] if last else None
-    last_eur = last["EUR"] if last else None
-    
+
+    usd, eur = best["USD"], best["EUR"]
+    last_usd = last_best["USD"] if last_best else None
+    last_eur = last_best["EUR"] if last_best else None
+
     message = (
         f"📅 <b>{today}</b>\n\n"
+        f"🏆 <b>Лучшие курсы</b>\n\n"
         f"💵 <b>USD</b>\n"
         f"  Сдать: <code>{usd['sell']}</code> BYN{format_delta(last_usd['sell'] if last_usd else None, usd['sell'])}\n"
         f"  Купить: <code>{usd['buy']}</code> BYN{format_delta(last_usd['buy'] if last_usd else None, usd['buy'])}\n\n"
         f"💶 <b>EUR</b>\n"
         f"  Сдать: <code>{eur['sell']}</code> BYN{format_delta(last_eur['sell'] if last_eur else None, eur['sell'])}\n"
-        f"  Купить: <code>{eur['buy']}</code> BYN{format_delta(last_eur['buy'] if last_eur else None, eur['buy'])}\n\n"
-        f"https://myfin.by/currency/gomel"
-    
+        f"  Купить: <code>{eur['buy']}</code> BYN{format_delta(last_eur['buy'] if last_eur else None, eur['buy'])}\n"
     )
-    
+
+    if favorites:
+        for bank_name, rates in favorites.items():
+            f_usd, f_eur = rates["USD"], rates["EUR"]
+            message += f"\n🏦 <b>{bank_name}</b>\n"
+            message += f"💵 USD — Сдать: <code>{f_usd['sell']}</code> / Купить: <code>{f_usd['buy']}</code>\n"
+            message += f"💶 EUR — Сдать: <code>{f_eur['sell']}</code> / Купить: <code>{f_eur['buy']}</code>\n"
+
+    message += f"\nhttps://myfin.by/currency/gomel"
+
     bot = Bot(token=os.environ["BOT_TOKEN"])
     await bot.send_message(chat_id=os.environ["CHANNEL_ID"], text=message, parse_mode=ParseMode.HTML, link_preview_options=LinkPreviewOptions(is_disabled=True))
     print("Sent successfully!")
 
-    save_rates(rates)
+    save_rates(data)
     commit_rates()
 
 asyncio.run(main())
