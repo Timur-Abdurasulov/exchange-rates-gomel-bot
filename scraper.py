@@ -9,6 +9,22 @@ FAVORITE_BANKS = [
     "Приложение BNB-Bank",
 ]
 
+# Banks to exclude from "best rate" calculation (e.g. exchangers, unreliable apps, etc.)
+EXCLUDED_BANKS = [
+    "Обменять выгодно",
+    "INSNC by Alfa Bank",
+    "Up «Суперкурс»",
+    "Будь в курсе",
+    "MyTechno",
+    "Обменник Moby",
+    "BSB-Bank App",
+    "Zepter Mobile",
+    "Приложение Neo Bank",
+    "Myfin Обмен",
+    "Банк БелВЭБ",
+    "Белинкасгрупп",
+]
+
 
 async def get_best_rates() -> dict:
     async with async_playwright() as p:
@@ -40,7 +56,11 @@ async def get_best_rates() -> dict:
 
         # ---- Scan the full table once; derive best rates directly from it ----
         table_rows = await _scan_table(page)
-        best = _compute_best_from_table(table_rows)
+        filtered_rows = [
+            row for row in table_rows
+            if not any(excluded in row["bank"] for excluded in EXCLUDED_BANKS)
+        ]
+        best = _compute_best_from_table(filtered_rows)
 
         # ---- Favorite bank rates from the full table ----
         favorites = _extract_favorite_banks(table_rows, FAVORITE_BANKS)
