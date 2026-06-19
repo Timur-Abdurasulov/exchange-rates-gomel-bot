@@ -41,6 +41,15 @@ def commit_rates():
     else:
         print("No changes to commit")
 
+def format_currency_block(label, rates, last_rates):
+    last_sell = last_rates["sell"] if last_rates else None
+    last_buy = last_rates["buy"] if last_rates else None
+    return (
+        f"{label}\n"
+        f"  Сдать: <code>{rates['sell']}</code> BYN{format_delta(last_sell, rates['sell'])}\n"
+        f"  Купить: <code>{rates['buy']}</code> BYN{format_delta(last_buy, rates['buy'])}\n"
+    )
+
 async def main():
     data = await get_best_rates()
     best = data["best"]
@@ -48,31 +57,28 @@ async def main():
 
     last_data = load_last_rates()
     last_best = last_data["best"] if last_data else None
+    last_favorites = last_data.get("favorites", {}) if last_data else {}
 
     utc_plus_3 = timezone(timedelta(hours=3))
     today = datetime.now(utc_plus_3).strftime("%d.%m.%Y %H:%M")
 
-    usd, eur = best["USD"], best["EUR"]
     last_usd = last_best["USD"] if last_best else None
     last_eur = last_best["EUR"] if last_best else None
 
-    message = (
-        f"📅 <b>{today}</b>\n\n"
-        f"🏆 <b>Лучшие курсы</b>\n\n"
-        f"💵 <b>USD</b>\n"
-        f"  Сдать: <code>{usd['sell']}</code> BYN{format_delta(last_usd['sell'] if last_usd else None, usd['sell'])}\n"
-        f"  Купить: <code>{usd['buy']}</code> BYN{format_delta(last_usd['buy'] if last_usd else None, usd['buy'])}\n\n"
-        f"💶 <b>EUR</b>\n"
-        f"  Сдать: <code>{eur['sell']}</code> BYN{format_delta(last_eur['sell'] if last_eur else None, eur['sell'])}\n"
-        f"  Купить: <code>{eur['buy']}</code> BYN{format_delta(last_eur['buy'] if last_eur else None, eur['buy'])}\n"
-    )
+    message = f"📅 <b>{today}</b>\n\n"
+    message += f"🏆 <b>Лучшие курсы</b>\n\n"
+    message += format_currency_block("💵 <b>USD</b>", best["USD"], last_usd) + "\n"
+    message += format_currency_block("💶 <b>EUR</b>", best["EUR"], last_eur)
 
     if favorites:
         for bank_name, rates in favorites.items():
-            f_usd, f_eur = rates["USD"], rates["EUR"]
-            message += f"\n🏦 <b>{bank_name}</b>\n"
-            message += f"💵 USD — Сдать: <code>{f_usd['sell']}</code> / Купить: <code>{f_usd['buy']}</code>\n"
-            message += f"💶 EUR — Сдать: <code>{f_eur['sell']}</code> / Купить: <code>{f_eur['buy']}</code>\n"
+            last_bank = last_favorites.get(bank_name)
+            last_bank_usd = last_bank["USD"] if last_bank else None
+            last_bank_eur = last_bank["EUR"] if last_bank else None
+
+            message += f"\n🏦 <b>{bank_name}</b>\n\n"
+            message += format_currency_block("💵 <b>USD</b>", rates["USD"], last_bank_usd) + "\n"
+            message += format_currency_block("💶 <b>EUR</b>", rates["EUR"], last_bank_eur)
 
     message += f"\nhttps://myfin.by/currency/gomel"
 
