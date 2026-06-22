@@ -51,8 +51,8 @@ def format_currency_block(label, rates, last_rates):
 
     return (
         f"{label}\n"
-        f"  Сдать: <code>{rates['sell']}</code> BYN{format_delta(last_sell, rates['sell'])}{sell_banks_str}\n"
-        f"  Купить: <code>{rates['buy']}</code> BYN{format_delta(last_buy, rates['buy'])}{buy_banks_str}\n"
+        f"  <b>Сдать:</b> <code>{rates['sell']}</code> BYN{format_delta(last_sell, rates['sell'])}{sell_banks_str}\n"
+        f"  <b>Купить:</b> <code>{rates['buy']}</code> BYN{format_delta(last_buy, rates['buy'])}{buy_banks_str}\n"
     )
 
 async def main():
@@ -70,7 +70,7 @@ async def main():
     last_usd = last_best["USD"] if last_best else None
     last_eur = last_best["EUR"] if last_best else None
 
-    message = f"📅 <b>{today}</b>\n\n"
+    message = f"📅 <b>{today}</b>\n\n\n"
     message += f"🏆 <b>Лучшие курсы</b>\n\n"
     message += format_currency_block("💵 <b>USD</b>", best["USD"], last_usd) + "\n"
     message += format_currency_block("💶 <b>EUR</b>", best["EUR"], last_eur) + "\n"
