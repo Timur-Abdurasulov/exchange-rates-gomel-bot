@@ -73,7 +73,7 @@ async def main():
     message = f"📅 <b>{today}</b>\n\n\n"
     message += f"🏆 <b>Лучшие курсы</b>\n\n"
     message += format_currency_block("💵 <b>USD</b>", best["USD"], last_usd) + "\n"
-    message += format_currency_block("💶 <b>EUR</b>", best["EUR"], last_eur)
+    message += format_currency_block("💶 <b>EUR</b>", best["EUR"], last_eur) + "\n"
 
     if favorites:
         for bank_name, rates in favorites.items():
