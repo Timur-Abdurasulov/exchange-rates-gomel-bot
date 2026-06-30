@@ -7,6 +7,7 @@ TARGET_URL = "https://myfin.by/currency/gomel"
 # Add the exact bank names you want to track here (must match the table's first column)
 FAVORITE_BANKS = [
     "Искра BNB-Bank",
+    "BSB-Bank App",
 ]
 
 # Banks to exclude from "best rate" calculation (e.g. exchangers, unreliable apps, etc.)
