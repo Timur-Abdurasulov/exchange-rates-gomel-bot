@@ -83,7 +83,7 @@ async def main():
 
             message += f"\n🏦 <b>{bank_name}</b>\n\n"
             message += format_currency_block("💵 <b>USD</b>", rates["USD"], last_bank_usd) + "\n"
-            message += format_currency_block("💶 <b>EUR</b>", rates["EUR"], last_bank_eur)
+            message += format_currency_block("💶 <b>EUR</b>", rates["EUR"], last_bank_eur) + "\n"
 
     message += f"\nhttps://myfin.by/currency/gomel"
 
