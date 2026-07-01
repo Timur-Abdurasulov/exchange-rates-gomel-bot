@@ -6,7 +6,7 @@ TARGET_URL = "https://myfin.by/currency/gomel"
 
 # Add the exact bank names you want to track here (must match the table's first column)
 FAVORITE_BANKS = [
-    "Искра BNB-Bank",
+    "Искра | БНБ-Банк",
     "BSB-Bank App",
 ]
 
@@ -18,7 +18,6 @@ EXCLUDED_BANKS = [
     "Будь в курсе",
     "MyTechno",
     "Обменник Moby",
-    "BSB-Bank App",
     "Zepter Mobile",
     "Приложение Neo Bank",
     "Myfin Обмен",
