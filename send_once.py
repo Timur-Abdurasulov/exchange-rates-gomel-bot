@@ -71,7 +71,7 @@ async def main():
     last_eur = last_best["EUR"] if last_best else None
 
     message = f"📅 <b>{today}</b>\n\n\n"
-    # message += f"🏆 <b>Лучшие курсы</b>\n\n"
+    message += f"🏆 <b>Лучший курс по Гомелю</b>\n\n"
     message += format_currency_block("💵 <b>USD</b>", best["USD"], last_usd) + "\n"
     message += format_currency_block("💶 <b>EUR</b>", best["EUR"], last_eur) + "\n"
 
