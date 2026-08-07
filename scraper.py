@@ -8,8 +8,7 @@ TARGET_URL = "https://myfin.by/currency/gomel"
 FAVORITE_BANKS = [
     "Искра | БНБ-Банк",
     "BSB-Bank App",
-    "Обменник Moby",
-]
+    ]
 
 # Banks to exclude from "best rate" calculation (e.g. exchangers, unreliable apps, etc.)
 EXCLUDED_BANKS = [
