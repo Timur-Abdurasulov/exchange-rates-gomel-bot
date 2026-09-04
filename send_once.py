@@ -40,6 +40,26 @@ def commit_rates():
     else:
         print("No changes to commit")
 
+def rates_changed(current: dict, last: dict | None) -> bool:
+    if last is None:
+        return True
+    try:
+        for currency in ("USD", "EUR"):
+            for side in ("sell", "buy"):
+                if current["best"][currency][side] != last["best"][currency][side]:
+                    return True
+        for bank_name, rates in current["favorites"].items():
+            last_bank = last.get("favorites", {}).get(bank_name)
+            if last_bank is None:
+                return True
+            for currency in ("USD", "EUR"):
+                for side in ("sell", "buy"):
+                    if rates[currency][side] != last_bank[currency][side]:
+                        return True
+    except (KeyError, TypeError):
+        return True
+    return False
+
 def format_currency_block(label, rates, last_rates):
     last_sell = last_rates["sell"] if last_rates else None
     last_buy = last_rates["buy"] if last_rates else None
@@ -86,6 +106,10 @@ async def main():
             message += format_currency_block("💶 <b>EUR</b>", rates["EUR"], last_bank_eur) + "\n"
 
     message += f"\nhttps://myfin.by/currency/gomel"
+
+    if not rates_changed(data, last_data):
+        print("No rate changes — skipping message.")
+        return
 
     bot = Bot(token=os.environ["BOT_TOKEN"])
     await bot.send_message(chat_id=os.environ["CHANNEL_ID"], text=message, parse_mode=ParseMode.HTML, link_preview_options=LinkPreviewOptions(is_disabled=True))
